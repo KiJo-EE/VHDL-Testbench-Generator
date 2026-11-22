@@ -2,11 +2,17 @@
 
 Selbstprüfende VHDL-Testbenches aus gezeichneten Wellenformen – lokal, ohne Online-Tool.
 
+[Lizenz: MIT](LICENSE) · Repository: https://github.com/KiJo-EE/VHDL-Testbench-Generator
+
 Du beschreibst das erwartete Verhalten deines Moduls als Wellenform (WaveDrom-Format, live gerendert in einer
 Web-GUI). WaveTB erzeugt daraus die Testbench, simuliert mit **GHDL** und öffnet das Ergebnis in **Surfer**.
-Optional wird eine **VUnit**-Testbench samt `run_vunit.py` erzeugt. Die Testbench-Struktur entspricht dem
-ITDev-Online-Generator (https://www.itdev.co.uk/content/vhdl-testbench-generator-example); bestehende
-Wellenform-Dateien daraus laufen unverändert weiter.
+Optional wird eine **VUnit**-Testbench samt `run_vunit.py` erzeugt. Python-Standardbibliothek genügt, es gibt nichts
+zu installieren.
+
+Die Struktur der Testbenches und das Wellenform-Format orientieren sich am
+[Online-Generator von ITDev](https://www.itdev.co.uk/content/vhdl-testbench-generator-example); Wellenform-Dateien
+aus diesem Tool laufen unverändert weiter. WaveTB ist ein unabhängiges Projekt ohne Verbindung zu ITDev
+und enthält keinen Code von dort.
 
 ## Voraussetzungen
 
@@ -17,22 +23,32 @@ Wellenform-Dateien daraus laufen unverändert weiter.
 | Surfer (im `PATH`, oder `surfer` in `wavetb.json` bzw. Umgebungsvariable `SURFER`) | Wellenform-Anzeige | für „+ Surfer" |
 | VUnit (`pip install vunit_hdl`) | nur im Modus `vunit` | optional |
 
+## Installation
+
+```bash
+git clone https://github.com/KiJo-EE/VHDL-Testbench-Generator.git
+cd VHDL-Testbench-Generator
+```
+
+Mehr ist nicht nötig, solange Python und GHDL (siehe oben) installiert sind.
+
 ## Schnellstart
 
 ```bash
 python . gui examples/axis_pipe_stage
 ```
 
-(im WaveTB-Ordner; öffnet den Browser auf einem lokalen Port). Dort **Simulieren + Surfer** klicken – das
-Beispiel ist ein einfacher AXI-Stream-Pipeline-Stage und sollte durchlaufen.
+(im Repository-Ordner; öffnet den Browser auf einem lokalen Port). Dort **Simulieren + Surfer** klicken – das
+Beispiel ist ein einfacher AXI-Stream-Pipeline-Stage und sollte durchlaufen. Das Beispiel `examples/hierarchy`
+zeigt Untermodule in Unterordnern.
 
 Weitere Befehle:
 
 ```bash
-python . new mein_ordner --top C:\pfad\zu\mein_modul.vhd               # neuen Testbench-Ordner anlegen
-python . gen mein_ordner                                               # nur Testbench erzeugen
-python . run mein_ordner [--test NAME] [--surfer]                    # erzeugen + simulieren (+ Surfer)
-python . gui  mein_ordner [--port N] [--no-browser]                  # Web-GUI
+python . new mein_ordner --top C:\pfad\zu\mein_modul.vhd    # neuen Testbench-Ordner anlegen
+python . gen mein_ordner                                    # nur Testbench erzeugen
+python . run mein_ordner [--test NAME] [--surfer]           # erzeugen + simulieren (+ Surfer)
+python . gui mein_ordner [--port N] [--no-browser]          # Web-GUI
 ```
 
 `run` liefert Exitcode 0 bei bestandenen und 1 bei fehlgeschlagenen Tests (nutzbar in Skripten/CI).
@@ -198,4 +214,12 @@ Gruppen erscheinen als benannte Trennlinie (Surfer kennt per Kommandozeile keine
 ## Dateien des Tools
 
 `wavetb/core.py` (Wellenform-Parser) · `vhdl.py` (Entity-Parser) · `deps.py` (Abhängigkeiten/Compile-Reihenfolge) · `gen.py` (Testbench-Generator) · `runner.py`
-(GHDL/VUnit/Surfer) · `server.py` + `static/index.html` (GUI) · `examples/` (Beispielprojekt).
+(GHDL/VUnit/Surfer) · `server.py` + `static/index.html` (GUI) · `examples/` (Beispielprojekte).
+
+## Lizenz
+
+WaveTB steht unter der [MIT-Lizenz](LICENSE).
+
+GHDL, Surfer und VUnit sind eigenständige Programme mit eigenen Lizenzen; sie werden von WaveTB nur aufgerufen und
+nicht mitgeliefert. Das Wellenform-Format stammt von [WaveDrom](https://wavedrom.com/) (WaveTB nutzt nur das
+Format, keinen WaveDrom-Code).
