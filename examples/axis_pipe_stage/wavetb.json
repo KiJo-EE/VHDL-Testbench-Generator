@@ -1,0 +1,12 @@
+{
+  "top": "src/axis_pipe_stage.vhd",
+  "entity": "axis_pipe_stage",
+  "search": [],
+  "sources": [
+    "src/*.vhd"
+  ],
+  "period_ns": 10,
+  "clock": "",
+  "mode": "plain",
+  "surfer": ""
+}

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>WaveTB</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#f4f5f7;--panel:#fff;--fg:#1d2430;--mut:#6b7280;--line:#d5d9e0;--acc:#2456a6;--in:#1b9ad6;--out:#1e9e4a;--err:#c0262d;--ok:#1e7d3a}
+@media (prefers-color-scheme:dark){:root{--bg:#161a20;--panel:#1f242c;--fg:#e4e7ec;--mut:#9aa3b0;--line:#363d48;--acc:#6ea0ec;--in:#4fb8ea;--out:#4cc479;--err:#ff6b70;--ok:#4cc479}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,sans-serif}
+header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.hin{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;max-width:1468px}   /* bündig mit dem Inhalt darunter (main: 1500px - 2x16px) */
+h1{font-size:18px;margin:0;color:var(--acc)}
+.cfg{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;flex:1}
+.cfg .brk{flex-basis:100%;height:0;margin:-4px}
+.cfg label.wide{flex:1 1 560px}.cfg label.wide input{flex:1;min-width:0}
+label{display:flex;gap:6px;align-items:center;color:var(--mut);white-space:nowrap}
+input,select,textarea,button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px}
+input#search{width:150px}select#entity{min-width:150px}label button{padding:2px 8px;margin-left:-4px}input#period{width:70px}
+main{display:grid;grid-template-columns:1fr 220px;gap:12px;padding:12px 16px;max-width:1500px}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px}
+textarea#text{width:100%;height:260px;font:13px/1.35 Consolas,monospace;resize:vertical;white-space:pre;tab-size:2}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+button{cursor:pointer}button:hover{border-color:var(--acc)}button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--acc);color:#fff;border-color:var(--acc)}
+aside h3{margin:0 0 8px;font-size:14px}
+ul#tests{list-style:none;margin:0 0 8px;padding:0}
+ul#tests li{display:flex;justify-content:space-between;padding:6px 8px;border:1px solid var(--line);border-radius:4px;margin-bottom:4px;cursor:pointer}
+ul#tests li.sel{background:var(--acc);color:#fff;border-color:var(--acc)}
+ul#tests li span.x{opacity:.7;padding-left:8px}ul#tests li span.x:hover{opacity:1}
+#err{color:var(--err);font:13px Consolas,monospace;min-height:18px;margin-bottom:4px;white-space:pre-wrap}
+#wave{overflow-x:auto}
+#wave svg text{font:12px system-ui,sans-serif;fill:var(--fg)}
+pre#log{margin:8px 0 0;padding:8px;background:var(--bg);border:1px solid var(--line);border-radius:4px;max-height:280px;overflow:auto;font:12px/1.4 Consolas,monospace;white-space:pre-wrap}
+.ok{color:var(--ok)}.bad{color:var(--err)}.mut{color:var(--mut)}
+.full{grid-column:1/-1}
+.srcinfo{flex-basis:100%;font-size:12px;color:var(--mut)}
+.srcinfo summary{cursor:pointer}.srcinfo ul{margin:4px 0 0;padding-left:18px;font:12px Consolas,monospace}
+.srcinfo li.w{color:var(--err)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10}
+#modal[hidden]{display:none}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;width:min(640px,94vw);max-height:84vh;display:flex;flex-direction:column;padding:12px;gap:8px}
+.mbox h3{margin:0;font-size:15px}.mbox .bar{margin:0}
+#mPath{flex:1;min-width:0}
+#mList{list-style:none;margin:0;padding:0;overflow:auto;border:1px solid var(--line);border-radius:4px;min-height:240px;flex:1}
+#mList li{padding:4px 10px;cursor:pointer;display:flex;gap:8px}#mList li:hover{background:var(--bg)}
+#mList li.sel{background:var(--acc);color:#fff}
+#mList li .ic{width:1.2em;opacity:.7}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <h1>WaveTB</h1>
+  <div class="cfg">
+    <label class="wide">Top-Level <input id="top" placeholder="VHDL-Datei des zu testenden Moduls"><button id="pickTop" title="Top-Level-Datei auf dem PC auswählen">…</button></label>
+    <label>Entity <select id="entity"></select></label>
+    <div class="brk"></div>
+    <label class="wide" title="Hier werden gespeichert: Testbench (&lt;entity&gt;_&lt;test&gt;_tb.vhd), Wellenform-Dateien (&lt;test&gt;.wave.json) und Einstellungen (wavetb.json). Temporäres (GHDL-Arbeitsdateien, Wellen) liegt in build/.">Testbench <input id="outdir" placeholder="Ordner für Testbench und Wellenform-Dateien"><button id="pickOut" title="Ordner auswählen">…</button></label>
+    <div class="brk"></div>
+    <label class="wide">Weitere Ordner <input id="search" placeholder="optional, Komma-getrennt"><button id="pickDir" title="Zusätzlichen Suchordner hinzufügen">+</button></label>
+    <label title="Periodendauer des Taktes in der Simulation">Taktperiode <input id="period" type="number" step="any" min="0.02"> ns</label>
+    <label>Modus <select id="mode"><option value="plain">plain VHDL</option><option value="vunit">VUnit</option></select></label>
+  </div>
+  <details class="srcinfo" id="srcinfo"><summary id="srcsum">Quellen: …</summary><ul id="srclist"></ul></details>
+</div></header>
+<div id="modal" hidden>
+  <div class="mbox">
+    <h3 id="mTitle"></h3>
+    <div class="bar"><button id="mUp" title="Ordner nach oben">&#8593;</button><input id="mPath"><button id="mGo">Gehe zu</button></div>
+    <ul id="mList"></ul>
+    <div class="bar"><span class="mut" id="mHint" style="flex:1"></span><button id="mCancel">Abbrechen</button><button id="mOk" class="primary">Auswählen</button></div>
+  </div>
+</div>
+<main>
+  <section class="card">
+    <div class="bar">
+      <button id="skel" title="Ports des Entity als Vorlage einsetzen">Vorlage aus Entity</button>
+      <button id="save">Speichern (Strg+S)</button>
+      <span id="status" class="mut"></span>
+    </div>
+    <textarea id="text" spellcheck="false"></textarea>
+  </section>
+  <aside class="card">
+    <h3>Tests</h3>
+    <ul id="tests"></ul>
+    <button id="add">+ Test</button>
+  </aside>
+  <section class="card full">
+    <div id="err"></div>
+    <div id="wave"></div>
+  </section>
+  <section class="card full">
+    <div class="bar">
+      <button id="bGen">TB erzeugen</button>
+      <button id="bSim">Simulieren</button>
+      <button id="bSurf" class="primary">Simulieren + Surfer</button>
+      <label><input type="checkbox" id="all"> alle Tests</label>
+    </div>
+    <pre id="log">bereit.</pre>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const S = {config: {}, tests: {}, cur: null};
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : undefined);
+  return r.json();
+}
+function readCfg() {
+  const c = S.config;
+  c.top = $('top').value.trim();
+  c.entity = $('entity').value;
+  c.search = $('search').value.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+  c.period_ns = parseFloat($('period').value) || 10;
+  c.mode = $('mode').value;
+  return c;
+}
+function fillCfg() {
+  const c = S.config;
+  $('top').value = c.top || ''; $('search').value = (c.search || []).join(', ');
+  setEntities(c.entity ? [c.entity] : [], c.entity);
+  $('period').value = c.period_ns; $('mode').value = c.mode || 'plain';
+}
+function setEntities(list, sel) {
+  const e = $('entity'); e.innerHTML = '';
+  for (const n of list) { const o = document.createElement('option'); o.value = o.textContent = n; e.appendChild(o); }
+  if (sel) e.value = sel;
+  e.disabled = list.length <= 1;
+  e.parentElement.style.display = list.length > 1 ? '' : 'none';   // nur sichtbar, wenn die Datei mehrere Entities enthält
+}
+const base = p => p.split(/[\\/]/).pop();
+async function refreshResolve() {
+  readCfg();
+  const r = await api('/api/resolve', {config: S.config});
+  const sum = $('srcsum'), ul = $('srclist'); ul.innerHTML = '';
+  if (!r.ok) {
+    sum.textContent = 'Quellen: ' + r.error; sum.className = 'bad';
+    if (!S.config.top) setEntities([], '');
+    return;
+  }
+  sum.className = '';
+  sum.textContent = 'Quellen: ' + r.files.length + ' Datei(en) in Compile-Reihenfolge' + (r.warnings.length ? ' · ' + r.warnings.length + ' Hinweis(e)' : '');
+  for (const f of r.files) { const li = document.createElement('li'); li.textContent = f; ul.appendChild(li); }
+  for (const w of r.warnings) { const li = document.createElement('li'); li.className = 'w'; li.textContent = '! ' + w; ul.appendChild(li); }
+  setEntities(r.entities, r.entity);
+  if (r.entity !== S.config.entity) { S.config.entity = r.entity; status('ungespeichert'); }
+  render();
+}
+function absFromProject(p) {
+  if (!p) return S.dir || '';
+  if (/^([A-Za-z]:|[\\/])/.test(p)) return p;
+  const sep = (S.dir || '').includes('\\') ? '\\' : '/';
+  return (S.dir || '') + sep + p;
+}
+function pick(mode, start) {
+  return new Promise(resolve => {
+    const m = $('modal'); m.hidden = false;
+    $('mTitle').textContent = mode === 'file' ? 'VHDL-Datei auswählen' : 'Ordner auswählen';
+    $('mHint').textContent = mode === 'file' ? 'Datei anklicken (Doppelklick = übernehmen)' : 'In den Ordner wechseln und „Auswählen“ klicken';
+    let cur = null, sel = null;
+    const done = v => { m.hidden = true; $('mOk').onclick = $('mCancel').onclick = $('mUp').onclick = $('mGo').onclick = null; window.removeEventListener('keydown', esc); resolve(v); };
+    const esc = e => { if (e.key === 'Escape') done(null); };
+    window.addEventListener('keydown', esc);
+    const join = (a, n) => !a ? n : (/[\\/]$/.test(a) ? a + n : a + (a.includes('\\') ? '\\' : '/') + n);
+    async function go(path) {
+      const r = await api('/api/browse', {path, mode});
+      if (!r.ok) { $('mHint').textContent = r.error; return; }
+      cur = r; sel = null; $('mPath').value = r.path;
+      $('mOk').disabled = mode === 'file';
+      const ul = $('mList'); ul.innerHTML = '';
+      const add = (ic, name, cls, click, dbl) => {
+        const li = document.createElement('li'); li.className = cls || '';
+        li.innerHTML = '<span class="ic"></span><span></span>'; li.children[0].textContent = ic; li.children[1].textContent = name;
+        li.onclick = click; if (dbl) li.ondblclick = dbl; ul.appendChild(li); return li;
+      };
+      if (r.parent !== null && r.path) add('\u21b0', '..', '', () => go(r.parent));
+      for (const d of r.dirs) add('\u{1F4C1}', d, '', () => go(r.drives ? d : join(r.path, d)));
+      for (const f of r.files) {
+        const li = add('\u{1F4C4}', f, '', () => { ul.querySelectorAll('.sel').forEach(x => x.classList.remove('sel')); li.classList.add('sel'); sel = join(r.path, f); $('mOk').disabled = false; },
+          () => done(join(r.path, f)));
+      }
+    }
+    $('mOk').onclick = () => done(mode === 'file' ? sel : (cur && cur.path) || null);
+    $('mCancel').onclick = () => done(null);
+    $('mUp').onclick = () => cur && go(cur.parent || '');
+    $('mGo').onclick = () => go($('mPath').value.trim());
+    $('mPath').onkeydown = e => { if (e.key === 'Enter') go($('mPath').value.trim()); };
+    go(start);
+  });
+}
+async function changeDir(dir) {
+  dir = dir.trim();
+  if (!dir || dir === S.dir) { $('outdir').value = S.dir; return; }
+  readCfg();
+  const pr = await api('/api/probe', {dir});
+  if (!pr.ok) { alert(pr.error); $('outdir').value = S.dir; return; }
+  let load = false;
+  if (pr.has_project) {
+    load = confirm('In diesem Ordner liegt bereits ein WaveTB-Projekt (' + pr.tests + ' Test(s)).\n\n' +
+      'OK = Projekt laden (nicht gespeicherte Änderungen hier gehen verloren)\n' +
+      'Abbrechen = aktuelle Tests behalten und beim Speichern in diesen Ordner schreiben (gleichnamige Dateien werden überschrieben)');
+  }
+  const r = await api('/api/chdir', {dir, config: S.config, load});
+  if (!r.ok) { alert(r.error); $('outdir').value = S.dir; return; }
+  S.dir = r.dir; $('outdir').value = r.dir; S.config = r.config;
+  if (r.loaded) { S.tests = r.tests; fillCfg(); select(Object.keys(S.tests).sort()[0] || null); status('geladen', 'ok'); }
+  else { fillCfg(); status('ungespeichert'); }
+  refreshResolve();
+}
+function status(t, cls) { $('status').textContent = t; $('status').className = cls || 'mut'; }
+
+function renderTests() {
+  const ul = $('tests'); ul.innerHTML = '';
+  for (const n of Object.keys(S.tests).sort()) {
+    const li = document.createElement('li');
+    if (n === S.cur) li.className = 'sel';
+    li.innerHTML = '<span></span><span class="x" title="Test loeschen">&#10005;</span>';
+    li.firstChild.textContent = n;
+    li.onclick = () => select(n);
+    li.ondblclick = () => rename(n);
+    li.lastChild.onclick = e => { e.stopPropagation(); del(n); };
+    ul.appendChild(li);
+  }
+}
+function select(n) {
+  S.cur = n; $('text').value = n ? S.tests[n] : ''; $('text').disabled = !n;
+  renderTests(); render();
+}
+function cleanName(s) { return (s || '').trim().replace(/[^A-Za-z0-9_-]/g, '_'); }
+function addTest() {
+  const n = cleanName(prompt('Name des Tests:', 'test' + (Object.keys(S.tests).length + 1)));
+  if (!n) return;
+  if (S.tests[n] !== undefined) { alert('Name existiert schon'); return; }
+  S.tests[n] = '{\n  signal: [\n    {dir: \'in\', name: \'clk\', wave: \'p.......\'},\n  ],\n}\n';
+  select(n); status('ungespeichert');
+}
+function rename(n) {
+  const m = cleanName(prompt('Neuer Name:', n));
+  if (!m || m === n) return;
+  if (S.tests[m] !== undefined) { alert('Name existiert schon'); return; }
+  S.tests[m] = S.tests[n]; delete S.tests[n]; select(m); status('ungespeichert');
+}
+function del(n) {
+  if (!confirm('Test "' + n + '" loeschen?')) return;
+  delete S.tests[n];
+  select(Object.keys(S.tests).sort()[0] || null); status('ungespeichert');
+}
+async function save() {
+  readCfg();
+  const r = await api('/api/save', {config: S.config, tests: S.tests});
+  status(r.ok ? 'gespeichert' : 'Fehler: ' + r.error, r.ok ? 'ok' : 'bad');
+  return r.ok;
+}
+
+let rt = null;
+function render() { clearTimeout(rt); rt = setTimeout(doRender, 200); }
+async function doRender() {
+  if (!S.cur) { $('wave').innerHTML = ''; $('err').textContent = ''; return; }
+  const r = await api('/api/render', {text: S.tests[S.cur], config: readCfg()});
+  if (!r.ok) { $('err').textContent = r.error; return; }
+  $('err').textContent = ''; $('wave').innerHTML = draw(r.wave);
+}
+
+function segs(cells) {
+  const out = [];
+  cells.forEach((c, i) => {
+    const last = out[out.length - 1];
+    if (c.v === 'clk') { out.push({v: 'clk', i0: i, i1: i + 1, c}); return; }
+    if (last && last.v === c.v && (c.cont || c.v !== 'd')) last.i1 = i + 1;
+    else out.push({v: c.v, i0: i, i1: i + 1, label: c.label, base: c.base});
+  });
+  return out;
+}
+function esc(s) { return String(s).replace(/[&<>]/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[m])); }
+
+const SUB = '₀₁₂₃₄₅₆₇₈₉';
+function sub(b) { return b ? String(b).replace(/\d/g, d => SUB[d]) : ''; }
+
+function draw(w) {
+  const NW = 190, CW = 38, RH = 30, TOP = 22, n = w.ncyc, rows = w.signals;
+  const W = NW + n * CW + 12, H = TOP + rows.length * RH + 8;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`;
+  s += '<defs><pattern id="h" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="currentColor" stroke-width="1" opacity=".5"/></pattern></defs>';
+  for (let i = 0; i <= n; i++) {
+    const x = NW + i * CW;
+    s += `<line x1="${x}" y1="${TOP - 4}" x2="${x}" y2="${H - 4}" stroke="currentColor" opacity=".13" stroke-dasharray="2 3"/>`;
+    if (i < n) s += `<text x="${x + CW / 2}" y="${TOP - 8}" text-anchor="middle" opacity=".5">${i}</text>`;
+  }
+  let g0 = null;
+  rows.forEach((sg, r) => {
+    const y = TOP + r * RH, hi = y + 6, lo = y + RH - 8, mid = (hi + lo) / 2;
+    const col = sg.dir === 'out' ? 'var(--out)' : sg.dir === 'in' ? 'var(--in)' : 'var(--mut)';
+    const nm = sg.name + (sg.width ? `[${sg.width - 1}:0]` : '') + (sg.dir ? ' - ' + (sg.dir === 'out' ? 'Output' : 'Input') : '');
+    s += `<text x="${NW - 8}" y="${mid + 4}" text-anchor="end" style="fill:${col}">${esc(nm)}</text>`;
+    s += `<g stroke="${col}" fill="none" stroke-width="1.6" style="color:${col}">`;
+    const lv = v => v === '1' ? hi : v === '0' ? lo : mid;
+    if (sg.cells[0].v === 'clk') {
+      sg.cells.forEach((c, i) => {
+        const x = NW + i * CW, h = CW / 2, up = c.clk === 'p' || c.clk === 'P';
+        const a = up ? hi : lo, b = up ? lo : hi;
+        s += `<path d="M${x},${b} L${x},${a} L${x + h},${a} L${x + h},${b} L${x + CW},${b}"/>`;
+        if (c.clk === 'P' || c.clk === 'N') s += `<polygon points="${x},${mid - 6} ${x - 3},${mid + 1} ${x + 3},${mid + 1}" fill="currentColor" stroke="none" transform="${up ? '' : `rotate(180 ${x} ${mid - 2.5})`}"/>`;
+      });
+    } else {
+      const sl = segs(sg.cells); let prev = null;
+      const isBox = q => q && (q.v === 'x' || q.v === 'd');
+      sl.forEach((q, qi) => {
+        const x0 = NW + q.i0 * CW, x1 = NW + q.i1 * CW;
+        if (q.v === '0' || q.v === '1' || q.v === 'z') {
+          const yy = lv(q.v);
+          if (prev) { const py = isBox(prev) ? mid : lv(prev.v); if (py !== yy) s += `<path d="M${x0},${py} L${x0},${yy}"/>`; }
+          s += `<path d="M${x0},${yy} L${x1},${yy}"/>`;
+        } else {
+          // Box (x = schraffiert, d = Daten): Flanken schraeg, wenn ein Nachbar existiert -> ><
+          const L = qi > 0 ? 4 : 0, R = qi < sl.length - 1 ? 4 : 0;
+          if (prev && !isBox(prev)) s += `<path d="M${x0},${lv(prev.v)} L${x0},${mid}"/>`;
+          const pts = [];
+          pts.push(L ? `${x0},${mid} ${x0 + L},${hi}` : `${x0},${hi}`);
+          pts.push(R ? `${x1 - R},${hi} ${x1},${mid} ${x1 - R},${lo}` : `${x1},${hi} ${x1},${lo}`);
+          pts.push(L ? `${x0 + L},${lo}` : `${x0},${lo}`);
+          s += `<polygon points="${pts.join(' ')}"${q.v === 'x' ? ' fill="url(#h)"' : ''}/>`;
+          if (q.v === 'd') s += `<text x="${(x0 + x1) / 2}" y="${mid + 4}" text-anchor="middle" stroke="none" style="fill:var(--fg)">${esc(q.label || '')}${sub(q.base)}</text>`;
+        }
+        prev = q;
+      });
+    }
+    s += '</g>';
+    // Gruppen-Klammer
+    const nx = rows[r + 1];
+    if (sg.group && g0 === null) g0 = r;
+    if (g0 !== null && (!nx || nx.group !== sg.group)) {
+      const ya = TOP + g0 * RH + 4, yb = TOP + r * RH + RH - 4;
+      s += `<path d="M18,${ya} L12,${ya} L12,${yb} L18,${yb}" stroke="var(--mut)" fill="none"/>`;
+      s += `<text transform="translate(8,${(ya + yb) / 2}) rotate(-90)" text-anchor="middle" style="fill:var(--mut)">${esc(sg.group)}</text>`;
+      g0 = null;
+    }
+  });
+  return s + '</svg>';
+}
+
+async function run(action, surfer) {
+  if (!S.cur && !$('all').checked && action !== 'generate') { /* kein Test gewaehlt: alle */ }
+  await save();
+  $('log').textContent = 'laeuft ...'; $('log').className = '';
+  const test = (!$('all').checked && S.cur) ? S.cur : null;
+  const r = await api('/api/run', {config: S.config, tests: S.tests, action, test, surfer});
+  $('log').textContent = r.log || r.error || '';
+  $('log').className = r.ok ? 'ok' : 'bad';
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+$('text').addEventListener('input', e => { if (S.cur) { S.tests[S.cur] = e.target.value; status('ungespeichert'); render(); } });
+$('text').addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '  '); }
+});
+for (const id of ['period', 'mode']) $(id).addEventListener('change', () => { readCfg(); status('ungespeichert'); render(); });
+$('top').addEventListener('change', () => { S.config.entity = ''; setEntities([], ''); status('ungespeichert'); refreshResolve(); });
+$('entity').addEventListener('change', () => { status('ungespeichert'); refreshResolve(); });
+$('search').addEventListener('change', () => { status('ungespeichert'); refreshResolve(); });
+$('pickTop').onclick = async () => {
+  const cur = $('top').value.trim();
+  const p = await pick('file', cur ? absFromProject(cur) : S.dir);
+  if (p) { $('top').value = p; $('top').dispatchEvent(new Event('change')); }
+};
+$('outdir').addEventListener('change', () => changeDir($('outdir').value));
+$('pickOut').onclick = async () => {
+  const p = await pick('dir', S.dir);
+  if (p) changeDir(p);
+};
+$('pickDir').onclick = async () => {
+  const p = await pick('dir', S.dir);
+  if (p) { const v = $('search').value.trim(); $('search').value = v ? v + ', ' + p : p; $('search').dispatchEvent(new Event('change')); }
+};
+$('add').onclick = addTest;
+$('save').onclick = save;
+$('bGen').onclick = () => run('generate', false);
+$('bSim').onclick = () => run('sim', false);
+$('bSurf').onclick = () => run('sim', true);
+$('skel').onclick = async () => {
+  if (!S.cur) addTest();
+  if (!S.cur) return;
+  readCfg();
+  const r = await api('/api/skeleton', {config: S.config});
+  if (!r.ok) { $('err').textContent = r.error; return; }
+  S.tests[S.cur] = r.text; $('text').value = r.text; status('ungespeichert'); render();
+};
+window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); } });
+
+(async () => {
+  const p = await api('/api/project');
+  S.config = p.config; S.tests = p.tests; S.dir = p.dir; $('outdir').value = p.dir; fillCfg();
+  select(Object.keys(S.tests).sort()[0] || null);
+  refreshResolve();
+})();
+</script>
+</body>
+</html>

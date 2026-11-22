@@ -1,0 +1,10 @@
+{
+  "top": "src/top_adder.vhd",
+  "entity": "top_adder",
+  "search": [],
+  "sources": [],
+  "period_ns": 10,
+  "clock": "",
+  "mode": "plain",
+  "surfer": ""
+}

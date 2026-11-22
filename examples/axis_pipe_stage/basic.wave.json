@@ -1,0 +1,13 @@
+{
+  signal: [
+    { dir: 'in'  ,  name: 'clk'             ,  wave: 'p.......'                                        },
+    ['Gruppe 1',
+      { dir: 'out' ,  name: 'axis_in_tready' ,  wave: '1......'                                         },
+      { dir: 'in'  ,  name: 'axis_in_tvalid' ,  wave: '01.010.'                                         },
+      { dir: 'in'  ,  name: 'axis_in_tdata'  ,  wave: 'x==x=x.' ,  data: ["AA","5F","6B"] ,  radix: 'h' },
+    ],
+    { dir: 'in'  ,  name: 'axis_out_tready' ,  wave: '1......'                                         },
+    { dir: 'out' ,  name: 'axis_out_tvalid' ,  wave: '0.1.010'                                         },
+    { dir: 'out' ,  name: 'axis_out_tdata'  ,  wave: 'xx==x=x' ,  data: ["AA","5F","6B"] ,  radix: 'h' },
+  ],
+}

@@ -1,0 +1,9 @@
+{
+  signal: [
+    {dir: 'in',  name: 'clk', wave: 'p....'},
+    {dir: 'in',  name: 'a',   wave: '=.=xx', width: 8, data: ["03","FF"], radix: 'h'},
+    {dir: 'in',  name: 'b',   wave: '=.=xx', width: 8, data: ["04","01"], radix: 'h'},
+    {dir: 'out', name: 'sum', wave: 'x=.=x', width: 9, data: ["007","100"], radix: 'h'},
+    {dir: 'out', name: 'na',  wave: 'x=.=x', width: 8, data: ["FC","00"], radix: 'h'},
+  ],
+}
